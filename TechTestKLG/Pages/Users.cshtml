@@ -1,0 +1,186 @@
+﻿@page
+@{
+    ViewData["Title"] = "User List";
+}
+
+<div class="container mt-5">
+    <h2>User List</h2>
+    <div class="row">
+        <div class="col-12">
+            <button class="btn btn-primary mb-3" id="addUserBtn">Add User</button>
+        </div>
+    </div>
+
+    <table id="userTable" class="table table-striped table-bordered" style="width:100%">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Password</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel">Add/Edit User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="closeModalBtn">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancelUserbtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveUserBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        function refreshTable() {
+            return $('#userTable').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "destroy": true,
+                "ajax": {
+                    "url": "/api/User/GetUsers",
+                    "type": "POST",
+                    "contentType": "application/json",
+                    "data": function (data) {
+                        return JSON.stringify({
+                            draw: data.draw,
+                            start: data.start,
+                            length: data.length,
+                            search: data.search.value
+                        });
+                    },
+                    "dataSrc": function (json) {
+                        return json.data;
+                    }
+                },
+                "columns": [
+                    { "data": "username" },
+                    { "data": "name" },
+                    { "data": "password" },
+                    {
+                        "data": null,
+                        "orderable": false,
+                        "render": function (data, type, row) {
+                            return `<button class='btn btn-sm btn-primary editBtn'>Edit</button>
+                                    <button class='btn btn-sm btn-danger deleteBtn'>Delete</button>`;
+                        }
+                    }
+                ],
+                "pagingType": "full_numbers"
+            });
+        }
+
+        var table = refreshTable();
+
+        $('#addUserBtn').click(function () {
+            $('#userForm')[0].reset();
+            $('#username').prop('readonly', false);
+            $('#userModalLabel').text("Add User");
+            $('#saveUserBtn').data('action', 'insert');
+            $('#userModal').modal('show');
+        });
+        $('#userTable tbody').on('click', '.editBtn', function () {
+            var data = table.row($(this).parents('tr')).data();
+            var username = data.username;
+
+            $('#userModalLabel').text("Edit User");
+            $('#saveUserBtn').data('action', 'edit').data('username', username);
+
+            $.ajax({
+                url: `/api/user/getuser/${username}`,
+                type: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                success: function (user) {
+                    $('#username').val(user.username).prop('readonly', true);
+                    $('#name').val(user.name);
+                    $('#password').val(user.password);
+
+                    $('#userModal').modal('show');
+                },
+                error: function () {
+                    alert('Error fetching user details');
+                }
+            });
+        });
+        $('#cancelUserbtn').click(function () {
+            $('#userModal').modal('hide');
+        });
+
+        $('#closeModalBtn').click(function () {
+            $('#userModal').modal('hide');
+        });
+
+        $('#saveUserBtn').click(function () {
+            var action = $(this).data('action');
+            var url = action === 'insert' ? '/api/User' : '/api/User';
+            var type = action === 'insert' ? 'POST' : 'PUT';
+
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    username: $('#username').val(),
+                    name: $('#name').val(),
+                    password: $('#password').val()
+                }),
+                success: function () {
+                    $('#userModal').modal('hide');
+                    table.destroy(); 
+                    table = refreshTable(); 
+                },
+                error: function (xhr) {
+                    alert("Error: " + xhr.responseText);
+                }
+            });
+        });
+
+        $('#userTable tbody').on('click', '.deleteBtn', function () {
+            var data = table.row($(this).parents('tr')).data();
+            if (confirm("Are you sure you want to delete this user?")) {
+                $.ajax({
+                    url: '/api/User/' + data.username,
+                    type: 'DELETE',
+                    success: function () {
+                        table.destroy(); 
+                        table = refreshTable(); 
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            }
+        });
+    });
+
+</script>

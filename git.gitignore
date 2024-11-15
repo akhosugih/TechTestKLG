@@ -1,0 +1,29 @@
+# .gitignore at the root of your repository
+
+# Ignore build output directories
+bin/
+obj/
+
+# Ignore user-specific files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.ide
+
+# Ignore .NET files
+*.dll
+*.exe
+*.pdb
+*.app
+*.apk
+*.ipa
+
+# Ignore NuGet package files
+*.nupkg
+packages/
+
+# Ignore logs and temporary files
+*.log
+*.tmp
